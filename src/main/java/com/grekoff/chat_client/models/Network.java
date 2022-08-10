@@ -22,7 +22,7 @@ public class Network {
     private static final String STOP_SERVER_CMD_PREFIX = "/stop";
     private static final String END_CLIENT_CMD_PREFIX = "/end";
     public static final String DEFAULT_HOST = "localhost";
-    public static final int DEFAULT_PORT = 8189;
+    public static final int DEFAULT_PORT = 8888;
 
     private final String host;
     private final int port;
@@ -64,7 +64,7 @@ public class Network {
         }
     }
 
-//    public void waitMessage(ChatController controller) {
+
     public void waitMessage() {
 
         Thread t = new Thread(() -> {
@@ -75,24 +75,17 @@ public class Network {
                         break;
                     }
                     strFromServer = in.readUTF();
-//                    if (strFromServer.equalsIgnoreCase("/Check")) {
-//                        transferMessage("/Ready");
-//                        continue;
-//                    }
                     if (strFromServer.equalsIgnoreCase(END_CLIENT_CMD_PREFIX)) {
                         break;
                     }
                     if (strFromServer != null || !strFromServer.isEmpty()) {
-//                        chatController.appendMessage(strFromServer);
                         parsingMessage(strFromServer);
                     }
                 }
             } catch (IOException e) {
-//                    e.printStackTrace();
-                chatController.appendMessage("СОЕДИНЕНИЕ СЕРВЕРОМ ОТСУТСТВУЕТ");
+                chatController.appendMessage("СОЕДИНЕНИЕ С СЕРВЕРОМ ОТСУТСТВУЕТ");
             }
         });
-//        t.setDaemon(true);
         t.start();
     }
 
@@ -102,6 +95,9 @@ public class Network {
             if (clientUser.length >= 2) {
                 chatController.setUserName(clientUser[1]);
                 chatController.updateScene();
+                if (!chatController.getUserName().equals(clientUser[1])) {
+                    chatController.updateScene();
+                }
                 chatController.appendMessage(serverMessage);
             }
         } else if (serverMessage != null && serverMessage.startsWith(SERVER_ECHO_MSG_CMD_PREFIX)) {
@@ -114,7 +110,6 @@ public class Network {
         } else if (serverMessage != null){
             chatController.appendMessage(serverMessage);
         }
-//        System.out.println(serverMessage);///////////////////////////
     }
 
     public void transferMessage(String message) {
@@ -122,7 +117,7 @@ public class Network {
         try {
             if (message != null) {
                 out.writeUTF(message);
-                out.flush();////////////////////////////////
+                out.flush();
             }
         } catch (IOException e) {
             chatController.appendMessage("ОШИБКА ОТПРАВКИ СООБЩЕНИЯ");
@@ -140,7 +135,6 @@ public class Network {
             }
 
         } catch (IOException e) {
-//            e.printStackTrace();
             chatController.appendMessage("СОЕДИНЕНИЕ ЗАКРЫТО");
         }
     }

@@ -8,6 +8,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.text.FontPosture;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -31,12 +32,9 @@ public class ChatController {
     @FXML
     void initialize() {
         listMessage.setFocusTraversable(true);
-//        Platform.runLater(new Runnable() {
-//            @Override
-//            public void run() {
-//                inputField.requestFocus();
-//            }
-//        });
+//        listMessage.setStyle("-fx-text-inner-color: black;");
+        listMessage.setStyle("-fx-text-fill: black;");
+        listMessage.setVisible(true);
         Platform.runLater(() -> {
             inputField.requestFocus();
         });
@@ -62,7 +60,6 @@ public class ChatController {
     private void sendMessage() {
         String message = inputField.getText().trim();
         inputField.clear();
-//        inputField.setFocusTraversable(true);///////////////////
         inputField.requestFocus();
         if (!message.isEmpty()) {
             network.sendMessage(message);
@@ -72,13 +69,6 @@ public class ChatController {
 
 
     public void appendMessage(String message) {
-//        if (message != null && message.startsWith("/authOk")) {
-//            String[] clientUser = message.split("\\s");
-//            if (clientUser.length >= 2) {
-//                setUserName(clientUser[1]);
-//                updateScene();
-//            }
-//        }
         if (message.contains("\n")) {
             message = message.substring(message.length() - 2);
         }
@@ -107,5 +97,7 @@ public class ChatController {
     public void setUsernameTitle(String userName) {
         this.usernameTitle.setText(userName);
     }
+
+
 
 }

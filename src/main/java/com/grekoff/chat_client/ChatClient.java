@@ -18,12 +18,11 @@ public class ChatClient extends Application {
     public void start(Stage stage) throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(ChatClient.class.getResource("chat-view.fxml"));
         Scene scene = new Scene(fxmlLoader.load());
-        stage.setTitle("Чат \"Просто чат\"!");
+        stage.setTitle("Чат \"Просто чат\"! вер.2");
         stage.setScene(scene);
         stage.setX(800);
         stage.setY(200);
         stage.show();
-
 
 
         Network network = new Network();
@@ -36,8 +35,6 @@ public class ChatClient extends Application {
 
         chatController.startNetwork(chatController);
 
-//        network.connect();
-//        network.waitMessage(chatController);
 
         stage.setOnCloseRequest(new EventHandler<WindowEvent>() {
             @Override
