@@ -1,22 +1,33 @@
-//Домашнее задание,уровень 2, урок 7: Владимир Греков
+//Домашнее задание,уровень 2, урок 8: Владимир Греков
 package com.grekoff.chat_client.models;
 
+import com.grekoff.chat_client.ChatClient;
 import com.grekoff.chat_client.controllers.ChatController;
+import javafx.application.Platform;
+import javafx.event.EventHandler;
+import javafx.stage.WindowEvent;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.util.Arrays;
+import java.util.List;
 
 public class Network {
 
     private static final String AUTH_CMD_PREFIX = "/auth"; // + login + password
     private static final String AUTH_OK_CMD_PREFIX = "/authOk"; // + username
     private static final String AUTH_ERR_CMD_PREFIX = "/authErr"; // + error message
+    private static final String REG_CMD_PREFIX = "/reg"; // + login + password + username
+    private static final String REG_OK_CMD_PREFIX = "/regOk"; // + entry
+    private static final String REG_ERR_CMD_PREFIX = "/regErr"; // + error message
     private static final String CLIENT_MSG_CMD_PREFIX = "/cMsg"; // + msg
     private static final String SERVER_ECHO_MSG_CMD_PREFIX = "/echo"; // + msg
 
     private static final String SERVER_MSG_CMD_PREFIX = "/sMsg"; // + msg
+
+    private static final String SERVER_MSG_CMD_USERS_PREFIX = "/userList"; // + msg
     private static final String PRIVATE_MSG_CMD_PREFIX = "/pm"; // + username + msg
     private static final String CONNECT_CMD_PREFIX = "/connect"; // + login + password
     private static final String STOP_SERVER_CMD_PREFIX = "/stop";
@@ -35,12 +46,12 @@ public class Network {
 
     private ChatController chatController;
 
-    public ChatController getController() {
-        return chatController;
-    }
-    public void setController(ChatController controller) {
-        this.chatController = controller;
-    }
+    private String username;
+
+    private ChatClient chatClient;
+
+
+
 
     public Network(String host, int port) {
         this.host = host;
@@ -58,9 +69,20 @@ public class Network {
             in = new DataInputStream(socket.getInputStream());
             out = new DataOutputStream(socket.getOutputStream());
 
+
+            String answer = in.readUTF();
+            if (answer.startsWith(CONNECT_CMD_PREFIX)){
+                chatClient.showInfoAlert("Сообщение сервера", answer.split("\\s+", 2)[1], true);
+                chatClient.startDialog();
+            }
+
         } catch (Exception e) {
-//            e.printStackTrace();
-            chatController.appendMessage("СЕРВЕР НЕ ОТВЕЧАЕТ");
+//            chatController.appendMessage("СЕРВЕР НЕ ОТВЕЧАЕТ");
+            chatClient.showErrorAlert("Ошибка подключения","СОЕДИНЕНИЕ НЕ УСТАНОВЛЕНО",true);
+
+            closeConnection();
+
+
         }
     }
 
@@ -83,32 +105,53 @@ public class Network {
                     }
                 }
             } catch (IOException e) {
-                chatController.appendMessage("СОЕДИНЕНИЕ С СЕРВЕРОМ ОТСУТСТВУЕТ");
+                chatController.appendServerMessage("СОЕДИНЕНИЕ С СЕРВЕРОМ ОТСУТСТВУЕТ");
             }
         });
         t.start();
     }
 
-    private void parsingMessage(String serverMessage) {
-        if (serverMessage != null && serverMessage.startsWith(AUTH_OK_CMD_PREFIX)) {
-            String[] clientUser = serverMessage.split("\\s+");
+    private void parsingMessage(String incomingMessage) {
+
+        String typeMessage = incomingMessage.split("\\s+")[0];
+
+        if (typeMessage.equalsIgnoreCase(SERVER_MSG_CMD_USERS_PREFIX)) {
+            String[] clientUser = incomingMessage.split("\\s+");
+            List<String> clients;
             if (clientUser.length >= 2) {
-                chatController.setUserName(clientUser[1]);
-                chatController.updateScene();
-                if (!chatController.getUserName().equals(clientUser[1])) {
-                    chatController.updateScene();
+                clientUser[0] = "";
+                for (int i=0; i < clientUser.length; i++){
+                    if (clientUser[i].equals(this.username)){
+                        clientUser[i]="";
+                    }
                 }
-                chatController.appendMessage(serverMessage);
+                clients = Arrays.asList((String.join(" ", clientUser).trim()).split("\\s+"));
+                getController().setUsersList(clients);
             }
-        } else if (serverMessage != null && serverMessage.startsWith(SERVER_ECHO_MSG_CMD_PREFIX)) {
-            String[] echoMessage = serverMessage.split("\\s+");
+        } else if (typeMessage.equalsIgnoreCase(SERVER_ECHO_MSG_CMD_PREFIX)) {
+            String[] echoMessage = incomingMessage.split("\\s+");
             if (echoMessage.length >= 2) {
-                echoMessage[0] = "Я:";
-                serverMessage = String.join(" ", echoMessage);
-                chatController.appendMessage(serverMessage);
+                String sender = "Я";
+                echoMessage[0] = "";
+                String message = String.join(" ", echoMessage).trim();
+                chatController.appendMessage(sender, message);
             }
-        } else if (serverMessage != null){
-            chatController.appendMessage(serverMessage);
+        } else if (typeMessage.equalsIgnoreCase(CLIENT_MSG_CMD_PREFIX)) {
+            String[] parts = incomingMessage.split("\\s+", 3);
+            String sender = parts[1];
+            String messageFromSender = parts[2];
+            chatController.appendMessage(sender, messageFromSender);
+
+        } else if (typeMessage.equalsIgnoreCase(PRIVATE_MSG_CMD_PREFIX)) {
+            String[] parts = incomingMessage.split("\\s+", 3);
+            String sender = parts[1];
+            String messageFromSender = parts[2];
+            chatController.appendMessage("Вам пишет " + sender, messageFromSender);
+
+        } else if (typeMessage.equalsIgnoreCase(SERVER_MSG_CMD_PREFIX)) {
+            String[] parts = incomingMessage.split("\\s+", 2);
+            String serverMessage = parts[1];
+            chatController.appendServerMessage(serverMessage);
         }
     }
 
@@ -120,7 +163,7 @@ public class Network {
                 out.flush();
             }
         } catch (IOException e) {
-            chatController.appendMessage("ОШИБКА ОТПРАВКИ СООБЩЕНИЯ");
+            chatClient.showErrorAlert("Ошибка отправки сообщения","ОШИБКА ОТПРАВКИ СООБЩЕНИЯ",false);
         }
     }
     public void closeConnection() {
@@ -135,7 +178,7 @@ public class Network {
             }
 
         } catch (IOException e) {
-            chatController.appendMessage("СОЕДИНЕНИЕ ЗАКРЫТО");
+            chatClient.showInfoAlert("Завершение сеанса","СОЕДИНЕНИЕ ЗАКРЫТО",true);
         }
     }
 
@@ -146,22 +189,68 @@ public class Network {
                 waitMessage();
                 transferMessage(message);
             } catch (RuntimeException e) {
-                chatController.appendMessage("НЕ УДАЛОСЬ УСТАНОВИТЬ СОЕДИНЕНИЕ С СЕРВЕРОМ");
+                chatClient.showErrorAlert("Ошибка подключения","НЕ УДАЛОСЬ УСТАНОВИТЬ СОЕДИНЕНИЕ С СЕРВЕРОМ",false);
             }
         } else if (!message.isEmpty()) {
             try {
                 if (out != null) {
                     transferMessage(message);
                 }
-//                } else {
+
                 if (in == null) {
-                    chatController.appendMessage("ВОССТАНОВИТЕ СОЕДИНЕНИЕ С СЕРВЕРОМ: /connect");
+                    chatClient.showErrorAlert("Ошибка подключения","ВОССТАНОВИТЕ СОЕДИНЕНИЕ С СЕРВЕРОМ: /connect", false);
                 }
             } catch (Exception e) {
-//                e.printStackTrace();
-                chatController.appendMessage("ОШИБКА ОТПРАВКИ СООБЩЕНИЯ");
+                chatClient.showErrorAlert("Ошибка отправки сообщения","ОШИБКА ПРИ ОТПРАВКЕ СООБЩЕНИЯ", false);
             }
         }
+    }
+    public void sendPrivateMessage(String recipient, String message) {
+        try {
+            out.writeUTF(String.format("%s %s %s", PRIVATE_MSG_CMD_PREFIX, recipient, message));
+        } catch (IOException e) {
+            chatClient.showErrorAlert("Ошибка отправки сообщения","ОШИБКА ПРИ ОТПРАВКЕ СООБЩЕНИЯ", false);
+        }
+    }
+    public String sendAuthMessage(String login, String password) {
+        String result = "";
+        try {
+            out.writeUTF(String.format("%s %s %s", AUTH_CMD_PREFIX, login, password));
+            String answer;
+            do {
+                answer = in.readUTF();
+                if (answer.startsWith(AUTH_OK_CMD_PREFIX)) {
+                    this.username = answer.split("\\s+", 2)[1];
+                    chatController.setUserName(getUsername());
+                    chatController.updateUsernameTitle();
+                    result = null;
+                } else if (!answer.startsWith(SERVER_ECHO_MSG_CMD_PREFIX)) {
+                    result = answer.split("\\s+", 2)[1];
+                }
+            } while (answer.startsWith(SERVER_ECHO_MSG_CMD_PREFIX));
+        } catch (IOException e) {
+//            e.printStackTrace();
+            getChatClient().showErrorAlert("Ошибка отправки сообщения","ОШИБКА ПРИ ОТПРАВКЕ СООБЩЕНИЯ", false);
+//            return e.getMessage();
+        }
+        return result;
+    }
+    public String sendRegMessage(String login, String password, String username) {
+        String answer = "";
+        try {
+            out.writeUTF(String.format("%s %s %s %s", REG_CMD_PREFIX, login, password, username));
+            do {
+                answer = in.readUTF();
+                if (answer.startsWith(REG_OK_CMD_PREFIX) || answer.startsWith(REG_ERR_CMD_PREFIX)){
+                    break;
+                }
+            } while (answer.startsWith(SERVER_ECHO_MSG_CMD_PREFIX));
+        } catch (IOException e) {
+//            e.printStackTrace();
+            getChatClient().showErrorAlert("Ошибка отправки сообщения","ОШИБКА ПРИ ОТПРАВКЕ СООБЩЕНИЯ", false);
+//            return e.getMessage();
+        }
+        return answer;
     }
 
     public DataOutputStream getOut() {
@@ -179,7 +268,30 @@ public class Network {
     public void setIn(DataInputStream in) {
         this.in = in;
     }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setController(ChatController controller) {
+        this.chatController = controller;
+    }
+
+    public ChatController getController() {
+        return chatController;
+    }
+
+    public void setChatClient(ChatClient chatClient) {
+        this.chatClient = chatClient;
+    }
+
+    public ChatClient getChatClient() {
+        return chatClient;
+    }
+
+
 }
+
 
 
 

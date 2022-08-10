@@ -1,39 +1,57 @@
 //Домашнее задание,уровень 2, урок 7: Владимир Греков
 package com.grekoff.chat_client.controllers;
 
+import java.text.DateFormat;
+import java.util.List;
+import java.util.ResourceBundle;
+
+import com.grekoff.chat_client.ChatClient;
 import com.grekoff.chat_client.models.Network;
 import javafx.application.Platform;
+import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
-import javafx.scene.text.FontPosture;
+import javafx.scene.control.*;
+import javafx.scene.input.MouseEvent;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class ChatController {
+
     @FXML
-    private TextField inputField;
-    @FXML
-    private TextArea listMessage;
-    @FXML
-    private Button sendButton;
+    private ListView<String> usersList;
 
     @FXML
     private Label usernameTitle;
 
-    private String userName;
+    @FXML
+    private TextArea listMessage;
+
+    @FXML
+    private TextField inputField;
+
+    @FXML
+    private Button sendButton;
+
     private Network network;
+
+    @FXML
+    private String selectedRecipient;
+
+    private ChatClient chatClient;
+
+    @FXML
+    private ResourceBundle resources;
+
+
+    private String userName;
 
 
 
     @FXML
     void initialize() {
+
         listMessage.setFocusTraversable(true);
-//        listMessage.setStyle("-fx-text-inner-color: black;");
-        listMessage.setStyle("-fx-text-fill: black;");
         listMessage.setVisible(true);
         Platform.runLater(() -> {
             inputField.requestFocus();
@@ -42,18 +60,27 @@ public class ChatController {
         sendButton.setOnAction(event -> sendMessage());
         inputField.setOnAction(event -> sendMessage());
 
+        usersList.setCellFactory(lv -> {
+            MultipleSelectionModel<String> selectionModel = usersList.getSelectionModel();
+            ListCell<String> cell = new ListCell<>();
+            cell.textProperty().bind(cell.itemProperty());
+            cell.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
+                usersList.requestFocus();
+                if (!cell.isEmpty()) {
+                    int index = cell.getIndex();
+                    if (selectionModel.getSelectedIndices().contains(index)) {
+                        selectionModel.clearSelection(index);
+                        selectedRecipient = null;
+                    } else {
+                        selectionModel.select(index);
+                        selectedRecipient = cell.getItem();
+                    }
+                    event.consume();
+                }
+            });
+            return cell;
+        });
     }
-    public void startNetwork(ChatController chatController) throws RuntimeException {
-
-        try {
-            network.connect();
-            network.waitMessage();
-        } catch (RuntimeException e) {
-//            e.printStackTrace();
-            appendMessage("СЕРВЕР НЕ ОТВЕЧАЕТ");
-        }
-    }
-
 
 
     @FXML
@@ -62,21 +89,26 @@ public class ChatController {
         inputField.clear();
         inputField.requestFocus();
         if (!message.isEmpty()) {
-            network.sendMessage(message);
+            if (selectedRecipient != null) {
+                network.sendPrivateMessage(selectedRecipient, message);
+            } else {
+                network.sendMessage(message);
+            }
         }
     }
 
-
-
-    public void appendMessage(String message) {
-        if (message.contains("\n")) {
-            message = message.substring(message.length() - 2);
-        }
-        String dateFormatString = new SimpleDateFormat("d MMM, HH:mm:ss").format(new Date());
-        listMessage.appendText(String.format("%s\t\t%s\n", message, dateFormatString));
+    public void appendServerMessage(String message) {
+        listMessage.appendText(String.format("Сообщение: %s\n\n", message));
     }
 
-    public void updateScene() {
+    public void appendMessage(String sender, String message) {
+        String timeStamp = DateFormat.getInstance().format(new Date());
+
+        listMessage.appendText(timeStamp + "\n");
+        listMessage.appendText(String.format("%s:\n%s\n\n", sender, message));
+    }
+
+    public void updateUsernameTitle() {
         Platform.runLater(() -> {
             setUsernameTitle(getUserName());
         });
@@ -98,6 +130,23 @@ public class ChatController {
         this.usernameTitle.setText(userName);
     }
 
+    public void setChatClient(ChatClient chatClient) {
+        this.chatClient = chatClient;
+    }
+    public ChatClient getChatClient() {
+        return chatClient;
+    }
 
+    public void setUsersList(List<String> strUserList) {
+        updateUsersList(strUserList);
+    }
+    public void updateUsersList(List<String> strUserList) {
+        Platform.runLater(() -> {
+            this.usersList.refresh();
+            this.usersList.setItems(FXCollections.observableArrayList(strUserList));
+            usersList.setFocusTraversable(true);
+            inputField.requestFocus();
 
+        });
+    }
 }

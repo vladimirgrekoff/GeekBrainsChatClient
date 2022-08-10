@@ -4,10 +4,10 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.grekoff</groupId>
-    <artifactId>javafx_lesson7_chat_client</artifactId>
+    <groupId>com.example</groupId>
+    <artifactId>javafx_lesson8_chat_client</artifactId>
     <version>1.0-SNAPSHOT</version>
-    <name>javafx_lesson7_chat_client</name>
+    <name>javafx_lesson8_chat_client</name>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
