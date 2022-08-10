@@ -1,4 +1,4 @@
-//Домашнее задание,уровень 2, урок 8: Владимир Греков
+//Домашнее задание,уровень 3, урок 2: Владимир Греков
 package com.grekoff.chat_client;
 
 import com.grekoff.chat_client.controllers.ChatController;
@@ -24,7 +24,7 @@ public class ChatClient extends Application {
     private SignController signController;
 
     @Override
-    public void start(Stage stage) throws IOException {
+    public void start(Stage stage) {
         primaryStage = stage;
 
         network = new Network();
@@ -59,7 +59,7 @@ public class ChatClient extends Application {
         signController.setChatClient(this);
     }
 
-
+    //    public void createChatDialog(Stage stage) throws IOException {
     public void createChatDialog() throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(ChatClient.class.getResource("chat-view.fxml"));
         Scene scene = new Scene(fxmlLoader.load());
@@ -72,11 +72,12 @@ public class ChatClient extends Application {
 
 
 
-
+//        Network network = new Network();
         chatController = fxmlLoader.getController();
         network.setController(chatController);
         chatController.setNetwork(network);
         chatController.setChatClient(this);
+//        chatController.startNetwork(chatController);
 
 
         primaryStage.setOnCloseRequest(new EventHandler<WindowEvent>() {
@@ -91,9 +92,10 @@ public class ChatClient extends Application {
     public void openChatDialog() {
         authStage.close();
         primaryStage.show();
-        primaryStage.setTitle("Чат-клиент! вер.3");
+//        primaryStage.setTitle(network.getUsername());
+        primaryStage.setTitle("Чат-клиент! вер.4");
 
-        network.waitMessage();
+        network.waitMessage(); //network.waitMessage(chatController);
         chatController.setUsernameTitle(network.getUsername());
     }
 
@@ -127,8 +129,12 @@ public class ChatClient extends Application {
         return primaryStage;
     }
 
+    public Network getNetwork() {
+        return network;
+    }
+
     public static void main(String[] args) {
         launch();
-
     }
+
 }

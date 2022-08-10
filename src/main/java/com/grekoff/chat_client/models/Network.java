@@ -1,11 +1,9 @@
-//Домашнее задание,уровень 2, урок 8: Владимир Греков
+//Домашнее задание,уровень 3, урок 2: Владимир Греков
 package com.grekoff.chat_client.models;
 
 import com.grekoff.chat_client.ChatClient;
 import com.grekoff.chat_client.controllers.ChatController;
 import javafx.application.Platform;
-import javafx.event.EventHandler;
-import javafx.stage.WindowEvent;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -13,6 +11,8 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class Network {
 
@@ -22,6 +22,8 @@ public class Network {
     private static final String REG_CMD_PREFIX = "/reg"; // + login + password + username
     private static final String REG_OK_CMD_PREFIX = "/regOk"; // + entry
     private static final String REG_ERR_CMD_PREFIX = "/regErr"; // + error message
+    private static final String REG_EDIT_CMD_PREFIX = "/regEdit"; // + login + password + newUsername
+    private static final String REG_EDIT_OK_CMD_PREFIX = "/regEditOk"; // + newUsername
     private static final String CLIENT_MSG_CMD_PREFIX = "/cMsg"; // + msg
     private static final String SERVER_ECHO_MSG_CMD_PREFIX = "/echo"; // + msg
 
@@ -49,8 +51,7 @@ public class Network {
     private String username;
 
     private ChatClient chatClient;
-
-
+    public Timer timer;
 
 
     public Network(String host, int port) {
@@ -69,21 +70,43 @@ public class Network {
             in = new DataInputStream(socket.getInputStream());
             out = new DataOutputStream(socket.getOutputStream());
 
-
             String answer = in.readUTF();
-            if (answer.startsWith(CONNECT_CMD_PREFIX)){
-                chatClient.showInfoAlert("Сообщение сервера", answer.split("\\s+", 2)[1], true);
+            if (answer.startsWith(CONNECT_CMD_PREFIX)) {
+                answer = answer.replaceAll(CONNECT_CMD_PREFIX, "");
+                answer = answer.replaceAll("/", "").trim();
+                StartTimer();
+                chatClient.showInfoAlert("Сообщение сервера", answer, true);
                 chatClient.startDialog();
             }
 
+//            chatClient.startDialog();
+
+
         } catch (Exception e) {
+//            e.printStackTrace();
 //            chatController.appendMessage("СЕРВЕР НЕ ОТВЕЧАЕТ");
-            chatClient.showErrorAlert("Ошибка подключения","СОЕДИНЕНИЕ НЕ УСТАНОВЛЕНО",true);
-
+            chatClient.showErrorAlert("Ошибка подключения", "СОЕДИНЕНИЕ НЕ УСТАНОВЛЕНО", true);
             closeConnection();
-
-
         }
+    }
+
+
+    public void StartTimer() {
+        timer = new Timer();
+
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+
+                Platform.runLater(() -> {
+                    chatClient.showErrorAlert("Окончание времени до начала сеанса", "Время для выполнения входа в чат\nзакончилось. Соединение с сервером закрыто.", true);
+                    closeConnection();
+                    chatClient.getAuthStage().close();;
+                    chatClient.getPrimaryStage().close();
+                });
+                timer.cancel();
+            }
+        }, 120 * 1000);
     }
 
 
@@ -105,6 +128,7 @@ public class Network {
                     }
                 }
             } catch (IOException e) {
+
                 chatController.appendServerMessage("СОЕДИНЕНИЕ С СЕРВЕРОМ ОТСУТСТВУЕТ");
             }
         });
@@ -112,46 +136,82 @@ public class Network {
     }
 
     private void parsingMessage(String incomingMessage) {
+        int indexStart;
+        int indexEnd;
 
-        String typeMessage = incomingMessage.split("\\s+")[0];
+        indexStart = incomingMessage.indexOf("/",0);
+        indexEnd = incomingMessage.indexOf("/",indexStart+1);
+        String typeMessage = incomingMessage.substring(0,indexEnd).trim();
 
         if (typeMessage.equalsIgnoreCase(SERVER_MSG_CMD_USERS_PREFIX)) {
-            String[] clientUser = incomingMessage.split("\\s+");
+            incomingMessage = incomingMessage.replaceAll(SERVER_MSG_CMD_USERS_PREFIX, "").trim() ;
+            incomingMessage = incomingMessage.substring(1);
+            String[] clientUser = incomingMessage.split("/");
             List<String> clients;
+            String usersNames = "";
             if (clientUser.length >= 2) {
-                clientUser[0] = "";
                 for (int i=0; i < clientUser.length; i++){
                     if (clientUser[i].equals(this.username)){
-                        clientUser[i]="";
+                        clientUser[i] = "";
                     }
                 }
-                clients = Arrays.asList((String.join(" ", clientUser).trim()).split("\\s+"));
+                for (String s : clientUser) {
+                    if (!s.equals("")) {
+                        usersNames = usersNames + s + "/";
+                    }
+                }
+                clients = Arrays.asList(usersNames.trim().split("/"));
                 getController().setUsersList(clients);
             }
+
         } else if (typeMessage.equalsIgnoreCase(SERVER_ECHO_MSG_CMD_PREFIX)) {
-            String[] echoMessage = incomingMessage.split("\\s+");
+            incomingMessage = incomingMessage.replaceAll(SERVER_ECHO_MSG_CMD_PREFIX, "").trim() ;
+            incomingMessage = incomingMessage.substring(1);
+            String[] echoMessage = incomingMessage.split("/");
+
             if (echoMessage.length >= 2) {
                 String sender = "Я";
-                echoMessage[0] = "";
-                String message = String.join(" ", echoMessage).trim();
+                if (echoMessage[0].contains("cMsg")) {
+                    echoMessage[0] = "";
+                    sender = sender + " в чат";
+                } else if (echoMessage[0].contains("pm")) {
+                    echoMessage[0] = "";
+                    sender = sender + " для: " + echoMessage[1];
+                    echoMessage[1] = "";
+                }
+                String message = (String.join(" ", echoMessage)).trim();
                 chatController.appendMessage(sender, message);
             }
-        } else if (typeMessage.equalsIgnoreCase(CLIENT_MSG_CMD_PREFIX)) {
-            String[] parts = incomingMessage.split("\\s+", 3);
-            String sender = parts[1];
-            String messageFromSender = parts[2];
-            chatController.appendMessage(sender, messageFromSender);
-
-        } else if (typeMessage.equalsIgnoreCase(PRIVATE_MSG_CMD_PREFIX)) {
-            String[] parts = incomingMessage.split("\\s+", 3);
-            String sender = parts[1];
-            String messageFromSender = parts[2];
-            chatController.appendMessage("Вам пишет " + sender, messageFromSender);
 
         } else if (typeMessage.equalsIgnoreCase(SERVER_MSG_CMD_PREFIX)) {
-            String[] parts = incomingMessage.split("\\s+", 2);
-            String serverMessage = parts[1];
+            incomingMessage = incomingMessage.replaceAll(SERVER_MSG_CMD_PREFIX, "").trim() ;
+            incomingMessage = incomingMessage.substring(1);
+            if (incomingMessage.contains("/")){
+                incomingMessage = incomingMessage.replaceAll("/", " ");
+            }
+            String serverMessage = incomingMessage;
             chatController.appendServerMessage(serverMessage);
+
+        } else if (typeMessage.equalsIgnoreCase(CLIENT_MSG_CMD_PREFIX)) {
+            incomingMessage = incomingMessage.replaceAll(CLIENT_MSG_CMD_PREFIX, "").trim() ;
+            incomingMessage = incomingMessage.substring(1);
+            String[] parts = incomingMessage.split("/");
+
+            String sender = parts[0] + " в чат";
+            parts[0] = "";
+            String clientMessage = (String.join(" ", parts)).trim();
+            chatController.appendMessage(sender, clientMessage);
+
+        } else if (typeMessage.equalsIgnoreCase(PRIVATE_MSG_CMD_PREFIX)) {
+            incomingMessage = incomingMessage.replaceAll(PRIVATE_MSG_CMD_PREFIX, "").trim() ;
+            incomingMessage = incomingMessage.substring(1);
+            String[] parts = incomingMessage.split("/");
+
+            String sender = "Вам пишет " + parts[0];
+            parts[0] = "";
+
+            String privateMessage = (String.join(" ", parts)).trim();
+            chatController.appendMessage(sender, privateMessage);
         }
     }
 
@@ -194,61 +254,84 @@ public class Network {
         } else if (!message.isEmpty()) {
             try {
                 if (out != null) {
-                    transferMessage(message);
+                    transferMessage(String.format("%s/%s", CLIENT_MSG_CMD_PREFIX, message));
+//                    transferMessage(message);
                 }
 
                 if (in == null) {
                     chatClient.showErrorAlert("Ошибка подключения","ВОССТАНОВИТЕ СОЕДИНЕНИЕ С СЕРВЕРОМ: /connect", false);
                 }
             } catch (Exception e) {
+//                e.printStackTrace();
                 chatClient.showErrorAlert("Ошибка отправки сообщения","ОШИБКА ПРИ ОТПРАВКЕ СООБЩЕНИЯ", false);
             }
         }
     }
     public void sendPrivateMessage(String recipient, String message) {
         try {
-            out.writeUTF(String.format("%s %s %s", PRIVATE_MSG_CMD_PREFIX, recipient, message));
+            out.writeUTF(String.format("%s/%s/%s", PRIVATE_MSG_CMD_PREFIX, recipient, message));
         } catch (IOException e) {
+//            e.printStackTrace();
             chatClient.showErrorAlert("Ошибка отправки сообщения","ОШИБКА ПРИ ОТПРАВКЕ СООБЩЕНИЯ", false);
         }
     }
     public String sendAuthMessage(String login, String password) {
         String result = "";
+        int indexStart;
+        int indexEnd;
+        String answer;
+        String typeMessage;
+        if (timer != null) {
+            timer.cancel();
+        }
         try {
-            out.writeUTF(String.format("%s %s %s", AUTH_CMD_PREFIX, login, password));
-            String answer;
+            out.writeUTF(String.format("%s/%s/%s", AUTH_CMD_PREFIX, login, password));
             do {
                 answer = in.readUTF();
-                if (answer.startsWith(AUTH_OK_CMD_PREFIX)) {
-                    this.username = answer.split("\\s+", 2)[1];
+                indexStart = answer.indexOf("/",0);
+                indexEnd = answer.indexOf("/",indexStart+1);
+                typeMessage = answer.substring(0,indexEnd).trim();
+                if (typeMessage.equalsIgnoreCase(AUTH_OK_CMD_PREFIX)) {
+                    answer = answer.replaceAll(AUTH_OK_CMD_PREFIX, "").trim() ;
+                    this.username = answer.substring(1);
                     chatController.setUserName(getUsername());
                     chatController.updateUsernameTitle();
                     result = null;
-                } else if (!answer.startsWith(SERVER_ECHO_MSG_CMD_PREFIX)) {
-                    result = answer.split("\\s+", 2)[1];
+                } else if (!typeMessage.equalsIgnoreCase(SERVER_ECHO_MSG_CMD_PREFIX)) {
+                    answer = answer.replaceAll(typeMessage, "").trim() ;
+                    result = answer.substring(1);
                 }
-            } while (answer.startsWith(SERVER_ECHO_MSG_CMD_PREFIX));
+            } while (typeMessage.equalsIgnoreCase(SERVER_ECHO_MSG_CMD_PREFIX));
         } catch (IOException e) {
 //            e.printStackTrace();
             getChatClient().showErrorAlert("Ошибка отправки сообщения","ОШИБКА ПРИ ОТПРАВКЕ СООБЩЕНИЯ", false);
-//            return e.getMessage();
         }
         return result;
     }
-    public String sendRegMessage(String login, String password, String username) {
+    public String sendRegMessage(String login, String password, String username, boolean editUserName) {
         String answer = "";
+        String typeMessage;
+        if (timer != null) {
+            timer.cancel();
+        }
         try {
-            out.writeUTF(String.format("%s %s %s %s", REG_CMD_PREFIX, login, password, username));
+            if (editUserName) {
+                typeMessage = REG_EDIT_CMD_PREFIX;
+            } else {
+                typeMessage = REG_CMD_PREFIX;
+            }
+            out.writeUTF(String.format("%s/%s/%s/%s", typeMessage, login, password, username));
             do {
                 answer = in.readUTF();
-                if (answer.startsWith(REG_OK_CMD_PREFIX) || answer.startsWith(REG_ERR_CMD_PREFIX)){
+
+                if (answer.startsWith(REG_OK_CMD_PREFIX) || answer.startsWith(REG_EDIT_OK_CMD_PREFIX) || answer.startsWith(REG_ERR_CMD_PREFIX)) {
                     break;
                 }
+//            } while (!answer.startsWith(REG_OK_CMD_PREFIX) || !answer.startsWith(REG_ERR_CMD_PREFIX));
             } while (answer.startsWith(SERVER_ECHO_MSG_CMD_PREFIX));
         } catch (IOException e) {
 //            e.printStackTrace();
             getChatClient().showErrorAlert("Ошибка отправки сообщения","ОШИБКА ПРИ ОТПРАВКЕ СООБЩЕНИЯ", false);
-//            return e.getMessage();
         }
         return answer;
     }
@@ -288,7 +371,6 @@ public class Network {
     public ChatClient getChatClient() {
         return chatClient;
     }
-
 
 }
 

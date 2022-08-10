@@ -1,4 +1,4 @@
-//Домашнее задание,уровень 2, урок 7: Владимир Греков
+//Домашнее задание,уровень 3, урок 2: Владимир Греков
 package com.grekoff.chat_client.controllers;
 
 import java.text.DateFormat;
@@ -12,8 +12,6 @@ import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
-
-import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class ChatController {
@@ -145,8 +143,6 @@ public class ChatController {
             this.usersList.refresh();
             this.usersList.setItems(FXCollections.observableArrayList(strUserList));
             usersList.setFocusTraversable(true);
-            inputField.requestFocus();
-
         });
     }
 }
