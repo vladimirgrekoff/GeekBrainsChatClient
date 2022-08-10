@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="582.0" prefWidth="445.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.grekoff.chat_client.controllers.ChatController">
+   <children>
+      <SplitPane dividerPositions="0.8793103448275862" layoutX="10.0" layoutY="10.0" orientation="VERTICAL" prefHeight="582.0" prefWidth="565.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+         <items>
+            <VBox SplitPane.resizableWithParent="false">
+               <children>
+                  <HBox maxHeight="-Infinity" prefHeight="53.0" prefWidth="443.0">
+                     <children>
+                        <AnchorPane prefHeight="40.0" prefWidth="143.0">
+                           <children>
+                              <Label prefHeight="56.0" prefWidth="119.0" text="Чат" AnchorPane.leftAnchor="5.0">
+                                 <font>
+                                    <Font size="24.0" />
+                                 </font>
+                              </Label>
+                           </children>
+                        </AnchorPane>
+                        <AnchorPane prefHeight="56.0" prefWidth="303.0">
+                           <children>
+                              <Label fx:id="usernameTitle" alignment="CENTER_RIGHT" layoutX="173.0" prefHeight="56.0" prefWidth="290.0" text="User" textAlignment="RIGHT" AnchorPane.rightAnchor="12.0">
+                                 <font>
+                                    <Font size="24.0" />
+                                 </font>
+                              </Label>
+                           </children>
+                        </AnchorPane>
+                     </children>
+                  </HBox>
+                  <TextArea fx:id="listMessage" editable="false" prefHeight="452.0" prefWidth="443.0" wrapText="true">
+                     <font>
+                        <Font size="16.0" />
+                     </font>
+                  </TextArea>
+               </children>
+            </VBox>
+            <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="59.0" prefWidth="579.0">
+               <children>
+                  <SplitPane dividerPositions="0.7233468286099866" layoutX="340.0" layoutY="-4.0" prefHeight="287.0" prefWidth="443.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                     <items>
+                        <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="55.0" prefWidth="414.0">
+                           <children>
+                              <TextField fx:id="inputField" layoutX="105.0" layoutY="19.0" promptText="Введите Ваше сообщение" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                 <font>
+                                    <Font size="20.0" />
+                                 </font>
+                                 <padding>
+                                    <Insets bottom="10.0" left="20.0" right="20.0" top="10.0" />
+                                 </padding>
+                              </TextField>
+                           </children>
+                        </AnchorPane>
+                        <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="58.0" prefWidth="140.0">
+                           <children>
+                              <Button fx:id="sendButton" layoutX="75.0" layoutY="26.0" mnemonicParsing="false" text="Отправить " AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                 <font>
+                                    <Font name="System Bold" size="15.0" />
+                                 </font>
+                              </Button>
+                           </children>
+                        </AnchorPane>
+                     </items>
+                  </SplitPane>
+               </children>
+            </AnchorPane>
+         </items>
+      </SplitPane>
+   </children>
+</AnchorPane>
