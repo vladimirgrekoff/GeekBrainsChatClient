@@ -1,11 +1,12 @@
-//Домашнее задание,уровень 3, урок 2: Владимир Греков
+//Домашнее задание,уровень 3, урок 3: Владимир Греков
 package com.grekoff.chat_client.controllers;
 
 import java.text.DateFormat;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.ResourceBundle;
 
 import com.grekoff.chat_client.ChatClient;
+import com.grekoff.chat_client.models.Message;
 import com.grekoff.chat_client.models.Network;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -38,17 +39,16 @@ public class ChatController {
 
     private ChatClient chatClient;
 
-    @FXML
-    private ResourceBundle resources;
-
-
     private String userName;
+
+    private ArrayList<Message> historyMessage;
 
 
 
     @FXML
     void initialize() {
 
+        historyMessage = new ArrayList<>();
         listMessage.setFocusTraversable(true);
         listMessage.setVisible(true);
         Platform.runLater(() -> {
@@ -80,13 +80,13 @@ public class ChatController {
         });
     }
 
-
     @FXML
     private void sendMessage() {
         String message = inputField.getText().trim();
         inputField.clear();
         inputField.requestFocus();
         if (!message.isEmpty()) {
+            message = replaceServiceCharacters(message);
             if (selectedRecipient != null) {
                 network.sendPrivateMessage(selectedRecipient, message);
             } else {
@@ -95,15 +95,59 @@ public class ChatController {
         }
     }
 
+    private String replaceServiceCharacters(String txtString) {
+        // заменить символ "/" на "&#47;"
+        String result;
+        if (txtString.contains("/")) {
+            result = txtString.replaceAll("/", "&#47;");
+        } else {
+            result = txtString;
+        }
+        return result;
+    }
+
+    private String restoreServiceCharacters(String txtString) {
+        // заменить комбинацию "&#47;" на символ "/"
+        String result;
+        if (txtString.contains("&#47")) {
+            result = txtString.replaceAll("&#47;", "/");
+        } else {
+            result = txtString;
+        }
+        return result;
+    }
+
     public void appendServerMessage(String message) {
         listMessage.appendText(String.format("Сообщение: %s\n\n", message));
+        Message msg = new Message(null, "Сообщение:", message);
+        historyMessage.add(msg);
     }
 
     public void appendMessage(String sender, String message) {
+        message = restoreServiceCharacters(message);
         String timeStamp = DateFormat.getInstance().format(new Date());
 
         listMessage.appendText(timeStamp + "\n");
         listMessage.appendText(String.format("%s:\n%s\n\n", sender, message));
+        Message msg = new Message(timeStamp, sender, message);
+        historyMessage.add(msg);
+    }
+    public void loadMessageFromFile() {
+        String strHistory = "";
+
+        for (Message e: historyMessage) {
+            strHistory = strHistory + e.toString() + "\n";
+        }
+        listMessage.appendText(strHistory);
+    }
+
+    public ArrayList<Message> saveMessageToFile() {
+        if (historyMessage.size() > 100) {
+            int n = historyMessage.size() - 100;
+            historyMessage.subList(0, n).clear();
+        }
+
+        return historyMessage;
     }
 
     public void updateUsernameTitle() {
@@ -112,6 +156,13 @@ public class ChatController {
         });
     }
 
+    public ArrayList<Message> getHistoryMessage() {
+        return historyMessage;
+    }
+
+    public void setHistoryMessage(ArrayList<Message> historyMessage) {
+        this.historyMessage = historyMessage;
+    }
     public void setNetwork(Network network) {
         this.network = network;
     }
@@ -134,7 +185,6 @@ public class ChatController {
     public ChatClient getChatClient() {
         return chatClient;
     }
-
     public void setUsersList(List<String> strUserList) {
         updateUsersList(strUserList);
     }

@@ -34,8 +34,12 @@ public class SignController {
 
     @FXML
     private TextField usernameReg;
+
     private Network network;
+
     private ChatClient chatClient;
+
+    private ChatController chatController;
 
 
     @FXML
@@ -96,7 +100,7 @@ public class SignController {
     }
 
     @FXML
-    void checkAuth(ActionEvent event) {
+    void checkAuth(ActionEvent event) throws IOException {
         String login = loginField.getText().trim();
         String password = passwordField.getText().trim();
 
@@ -113,6 +117,7 @@ public class SignController {
         String authErrorMessage = network.sendAuthMessage(login, password);
 
         if (authErrorMessage == null) {
+            chatClient.setLogin(login);
             chatClient.openChatDialog();
         } else {
             chatClient.showErrorAlert("Ошибка аутентификации", authErrorMessage, true);
@@ -134,5 +139,13 @@ public class SignController {
 
     public ChatClient getStartClient() {
         return chatClient;
+    }
+
+    public void setController(ChatController controller) {
+        this.chatController = controller;
+    }
+
+    public ChatController getController() {
+        return chatController;
     }
 }
