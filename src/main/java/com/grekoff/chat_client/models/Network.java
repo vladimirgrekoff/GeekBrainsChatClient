@@ -251,6 +251,8 @@ public class Network {
             } catch (RuntimeException e) {
                 chatClient.showErrorAlert("Ошибка подключения","НЕ УДАЛОСЬ УСТАНОВИТЬ СОЕДИНЕНИЕ С СЕРВЕРОМ",false);
             }
+        } else if (message.equals(STOP_SERVER_CMD_PREFIX)) {
+            transferMessage(message);/////////////
         } else if (!message.isEmpty()) {
             try {
                 if (out != null) {

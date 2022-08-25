@@ -89,7 +89,10 @@ public class ChatController {
             message = replaceServiceCharacters(message);
             if (selectedRecipient != null) {
                 network.sendPrivateMessage(selectedRecipient, message);
-            } else {
+        } else {
+            if (message.contains("srv_cmd:")) {
+                message = message.replace("srv_cmd:", "/");
+            }
                 network.sendMessage(message);
             }
         }
